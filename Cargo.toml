@@ -5,16 +5,9 @@ edition = "2021"
 
 [dependencies]
 jsonic = "0.2.12"
-lazy_static = "*"
-
-#bytes = "1.6.0"
-#hyper = { version = "1.4.0", features = ["full"] }
 tokio = { version = "1.38.0", features = ["full"] }
-#http-body-util = "0.1"
-#hyper-util = { version = "0.1", features = ["full"] }
-#hyper-rustls = "*"
-rcgen = "*"
-#rustls = "*"
 rand = "*"
 tokio-rustls = "*"
+sha256 = "*"
 rustls-pemfile = "*"
+webpki-roots = "*"
