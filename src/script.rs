@@ -1,3 +1,3 @@
-fn parse script_file() {
+fn parse_script_file() {
 
 }

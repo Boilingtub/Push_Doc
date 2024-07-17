@@ -33,13 +33,13 @@ impl Url {
                         path = url[index1+3..][index2..].to_string();
                     }
                     None => {
-                        println!("path not found url needs atleat one \"/\" after domain");
+                        eprintln!("path not found url needs atleat one \"/\" after domain");
                         return Err(format!("{:?} is invalid url , url need at learst 1 \"/\" after domain",url))?
                     }
                 }
             }
             None => {
-                println!("// not found in url , invalid formatting");
+                eprintln!("// not found in url , invalid formatting");
                 return Err(format!("{:?} is invalid url, \"://\" needed in url",url))?;
             }
         };
@@ -78,7 +78,7 @@ pub async fn send_https(method:&str, select_url:&str, headers:Vec<(&str,&str)>, 
     let url = match Url::parse_from_str(select_url) {
         Ok(v) => v,
         Err(e) => {
-            println!("failed to parse URL , `{}`",e);
+            eprintln!("failed to parse URL , `{}`",e);
             return "".to_string();
         },
     };
@@ -110,11 +110,21 @@ pub async fn send_https(method:&str, select_url:&str, headers:Vec<(&str,&str)>, 
         .with_no_client_auth();
 
     let connector = TlsConnector::from(Arc::new(config));
-
-    let stream = TcpStream::connect(&addr).await.unwrap();
     
-    println!("Attempting connection to domain: {}  on address: {}",url.domain, addr);
-    println!("Sending content: {{\n{}\n}}\n\n",content);
+
+    let stream = match TcpStream::connect(&addr).await {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("failed to connect to {}\n 
+                check your internet connection",url.domain);
+            panic!("{}",e);
+        }
+    };
+    
+
+    
+    //println!("Attempting connection to domain: {}  on address: {}",url.domain, addr);
+    //println!("Sending content: {{\n{}\n}}\n\n",content);
 
     let domain = rustls::pki_types::ServerName::try_from(url.domain)
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid DNS-name")).unwrap()
@@ -129,12 +139,27 @@ pub async fn send_https(method:&str, select_url:&str, headers:Vec<(&str,&str)>, 
     };
   
     stream.write_all(content.as_bytes()).await.unwrap(); 
-    let mut buffer = [0;8192];
-    let byte_count = stream.read(&mut buffer).await.unwrap();
-    //println!("Stream {:?}",String::from_utf8_lossy(&buffer[0..byte_count]));
     
-    String::from_utf8_lossy(&buffer[0..byte_count]).to_string()
+    /*let mut buf = String::new();
+    stream.read_to_string(&mut buf).await.unwrap();
+    println!("Stream {}",buf);
+    buf*/
 
+    let mut fin_str = String::new();
+    loop {
+        let mut buffer = [0;432];
+        let byte_count = stream.read(&mut buffer).await.unwrap();
+        //println!("\n\nStream {:?}",String::from_utf8_lossy(&buffer[0..byte_count]));
+        
+        let stream_str = String::from_utf8_lossy(&buffer[0..byte_count]);
+
+        fin_str += &stream_str;
+        if stream_str.contains("0\r\n\r\n") {
+            break;
+        } 
+    }
+    //println!("fin_str = \n{}",fin_str);
+    fin_str
 }
 
 
@@ -155,7 +180,7 @@ pub async fn listen_https(addr:SocketAddr, response:&str) -> String{
     let listener = TcpListener::bind(&addr).await.unwrap();
     println!("Starting to listen on {}",addr);
     loop {
-        let (stream, peer_addr) = listener.accept().await.unwrap();
+        let (stream, _peer_addr) = listener.accept().await.unwrap();
         let acceptor = acceptor.clone();
 
         let fut = async move {
@@ -171,12 +196,20 @@ pub async fn listen_https(addr:SocketAddr, response:&str) -> String{
             stream.write_all(response.as_bytes()).await.unwrap();
                 
             let mut buf = Vec::new();   
-            let _size = stream.read_to_end(&mut buf).await.unwrap();
+            let _size = match stream.read_to_end(&mut buf).await{
+                Ok(v) => v,
+                Err(e) => {
+                    eprintln!("Failed to read data from {}\n 
+                        FATAL ERROR `{}`",_peer_addr,e);
+                    panic!("{}",e);
+                }
+            };
+            
             //println!("size = `{}`\ncontent = `{}`",size,String::from_utf8_lossy(&buf));
 
             stream.shutdown().await.unwrap();
             copy(&mut stream, &mut output).await.unwrap();
-            println!("successfully connected to: {}", peer_addr);
+            //println!("successfully connected to: {}", peer_addr);
             String::from_utf8_lossy(&buf).to_string()
             //Ok(()) as io::Result<()>
         };

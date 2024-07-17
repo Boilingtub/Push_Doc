@@ -14,7 +14,7 @@ impl ClientSecrets {
         let client_secrets_json = match jsonic::parse(client_secrets) {
             Ok(v) => v,
             Err(e) => {
-                println!("Error parsing client_secrets ,check if file valid\n{}",e);
+                eprintln!("Error parsing client_secrets ,check if file valid\n{}",e);
                 return Err(format!("Error parsing client secrets\n{}",client_secrets));
             },
         };
@@ -56,13 +56,13 @@ pub async fn get_access_token(renew: bool) -> String {
     if validate::if_token_exists() == true{
         let token_raw_json = match fs::read_to_string("auth/token") {
             Ok(v) => v,
-            Err(e) => { println!("Could not read token file, Err:{}",e);
+            Err(e) => { eprintln!("Could not read token file, Err:{}",e);
                         panic!();
             },
         };
         let token_json = match jsonic::parse(&token_raw_json) {
             Ok(v) => v,
-            Err(..) => { println!("Token file not valid json, recreating...");
+            Err(..) => { eprintln!("Token file not valid json, recreating...");
                         create_access_token().await;
                         return recurse_async_get_access_token(renew).await;
             },
@@ -70,7 +70,7 @@ pub async fn get_access_token(renew: bool) -> String {
         
         let token_type = match token_json["token_type"].as_str() {
             Some(v) => v,
-            None => { println!("Could not find `token_type`, recreating token...");
+            None => { eprintln!("Could not find `token_type`, recreating token...");
                         create_access_token().await;
                         return recurse_async_get_access_token(renew).await;
             }
@@ -79,7 +79,7 @@ pub async fn get_access_token(renew: bool) -> String {
         let to_get = if renew == false { "access_token"} else {"refresh_token"};
         let token_value = match token_json[to_get].as_str() {
             Some(v) => v,
-            None => { println!("Could not find `access_token`, recreating token...");
+            None => { eprintln!("Could not find `access_token`, recreating token...");
                       create_access_token().await;
                       return recurse_async_get_access_token(renew).await;
             },
@@ -102,7 +102,7 @@ pub fn get_client_secrets() -> ClientSecrets {
     let path = validate::choose_client_secrets();
     let client_secrets_raw_json = match fs::read_to_string(path) {
         Ok(v) => v,
-        Err(e) => { println!("Could not read client_secrets file\n{}
+        Err(e) => { eprintln!("Could not read client_secrets file\n{}
                     \n make sure the client_secrets file in in the `auth`
                     directory",e);
                     std::process::exit(1);
@@ -110,7 +110,7 @@ pub fn get_client_secrets() -> ClientSecrets {
     };
     match ClientSecrets::new(&client_secrets_raw_json) {
         Ok(v) => v,
-        Err(e) => { println!("Please reinstall your client_secrets file\n 
+        Err(e) => { eprintln!("Please reinstall your client_secrets file\n 
                             {}\n",e);
                     std::process::exit(1);
         }
@@ -138,7 +138,7 @@ pub async fn do_oauth_async(client_secrets:ClientSecrets) {
         ,url_base,redirect_uri,client_secrets.client_id);
 
 
-    println!("autorization_request = {}",autorization_request);
+    //println!("autorization_request = {}",autorization_request);
 
     
     let _ = std::process::Command::new("xdg-open")
@@ -163,7 +163,6 @@ pub async fn do_oauth_async(client_secrets:ClientSecrets) {
     let code = std::fs::read_to_string("auth/code").unwrap();*/
 
     exchange_code_for_tokens_async(&client_secrets,&code,&code_verifier).await;
-
 }
 
 
@@ -186,7 +185,7 @@ pub async fn exchange_code_for_tokens_async(client_secrets:&ClientSecrets, code:
     ];
 
     let httpresponse = send_https("POST",&client_secrets.token_uri,headers,&body,None).await;
-    println!("Response From {} :{{\n{}\n}}",client_secrets.token_uri,httpresponse);
+    //println!("Response From {} :{{\n{}\n}}",client_secrets.token_uri,httpresponse);
     let auth_request = parse_auth_data_from_response(&httpresponse);
     save_auth_token_local(&auth_request);
 
@@ -233,7 +232,7 @@ pub fn parse_auth_data_from_response(httpresponse: &str) -> String {
         Some(v) => v,
         None => panic!("Could not find `{{` in auth_str , auth_str not valid json"),
     };
-    let index2 = match httpresponse.find('}') {
+    let index2 = match httpresponse.rfind('}') {
         Some(v) => v,
         None => panic!("Could not find `}}` in auth_str , auth_str not valid json"),
     }; 
