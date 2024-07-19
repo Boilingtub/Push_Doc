@@ -184,7 +184,7 @@ pub async fn exchange_code_for_tokens_async(client_secrets:&ClientSecrets, code:
         ("Content-Length", &body_len),
     ];
 
-    let httpresponse = send_https("POST",&client_secrets.token_uri,headers,&body,None).await;
+    let httpresponse = send_https("POST",&client_secrets.token_uri,headers,&body,true);
     //println!("Response From {} :{{\n{}\n}}",client_secrets.token_uri,httpresponse);
     let auth_request = parse_auth_data_from_response(&httpresponse);
     save_auth_token_local(&auth_request);
@@ -205,7 +205,7 @@ pub async fn renew_access_token() {
         ("Content-Type","application/x-www-form-urlencoded"),
         ("Content-Length", &body_len),
     ];
-    let httpresponse = send_https("POST",&client_secrets.token_uri,headers,&body,None).await;
+    let httpresponse = send_https("POST",&client_secrets.token_uri,headers,&body,true);
     let renew_request = parse_auth_data_from_response(&httpresponse);
     update_auth_token_local(&renew_request).await;
 }

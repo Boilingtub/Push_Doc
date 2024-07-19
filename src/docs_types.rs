@@ -1,5 +1,4 @@
 use jsonic::json_item::JsonItem;
-use std::matches;
 
 pub struct GetJson {}
 impl GetJson {
@@ -144,8 +143,8 @@ impl <'a>Document<'_> {
             &Document::body_as_str(self) +   
         "]\n" +
         "},\n" +
-        "\"documentStyle\": {\n" + &self.document_style + "\n},\n" +
-        "\"namedStyles\": {\n" + &self.named_styles + "\n},\n" +
+        "\"documentStyle\": " + &self.document_style + ",\n" +
+        "\"namedStyles\": " + &self.named_styles + ",\n" +
 
         "\"revision_id\": \"" + &self.revision_id + "\",\n" +
         "\"suggestionsViewMode\": \"" + &self.suggestions_view_mode + "\",\n" +
@@ -238,7 +237,7 @@ impl SectionBreak {
         } else {"".to_string()};
         start_index_str + 
         "\"endIndex\": " + &self.end_index.to_string() + ",\n" +
-        "\"sectionBreak\": " + &self.section_break + "\n"
+        "\"sectionBreak\": " + &self.section_break
     }
 }
 
@@ -275,7 +274,38 @@ impl Paragraph {
     }
 
     fn to_string(&self) -> String {
-        "Paragraph".to_string() 
+        "\"startIndex\": ".to_owned() + &self.start_index.to_string() + ",\n" +
+        "\"endIndex\": " + &self.end_index.to_string() + ",\n" +
+        "\"paragraph\": {\n" + 
+            "\"elements\": [\n" +
+                &self.paragraph_elements_as_str() +
+            "],\n" +
+            "\"paragraphStyle\": {\n" + 
+                &self.paragraph_style.to_string() +
+            "}\n" +
+        "}"
+    }
+
+    fn paragraph_elements_as_str(&self) -> String {
+        let mut finstr = String::new();
+        for e in self.elements.iter().take(self.elements.len()-1) {
+            let s ="{\n".to_string() +
+                    &e.to_string() + 
+                    "\n},\n";
+            finstr += &s
+        }
+
+        let last_s = match &self.elements.last() {
+            Some(e) => &e.to_string(),
+            None => {
+                eprintln!("Last index of BodyParts Vector is Empty !
+                            Returning empty String as body part !");
+                ""
+            }
+        };
+        finstr += &("{\n".to_string() + last_s + "\n}\n");
+        finstr
+
     }
 }
 
@@ -293,6 +323,15 @@ impl ParagraphElement {
         }
     }
 
+    fn to_string(&self) -> String {
+        //"{\n".to_owned() +
+            "\"startIndex\": ".to_owned() + &self.start_index.to_string() + ",\n" +
+            "\"endIndex\": " + &self.end_index.to_string() + ",\n" +
+            "\"textRun\": {\n" +
+                &self.text_run.to_string() +
+            "}"
+       // "}\n"
+    }
 }
 
 pub struct TextRun {
@@ -306,6 +345,11 @@ impl TextRun {
             text_style: GetJson::string(&json,"textStyle"),
         }
     }
+
+    fn to_string(&self) -> String {
+        "\"content\": \"".to_owned() + &self.content + "\",\n" +
+        "\"textStyle\": " + &self.text_style + "\n"
+    }
 }
 
 pub struct ParagraphStyle {
@@ -318,6 +362,11 @@ impl ParagraphStyle {
             named_style_type: GetJson::string(json,"namedStyleType"),
             direction: GetJson::string(json,"direction"),
         } 
+    }
+
+    fn to_string(&self) -> String {
+        "\"namedStyleType\": \"".to_owned() + &self.named_style_type + "\",\n" +
+        "\"direction\": \"" + &self.direction + "\",\n"
     }
 }
 

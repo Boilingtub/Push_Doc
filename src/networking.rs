@@ -1,14 +1,16 @@
 use std::fs::File;
-use std::io::{self, BufReader, ErrorKind};
+use std::io::{self, BufReader, ErrorKind, Read,Write,Error};
 use std::net::{SocketAddr,ToSocketAddrs,Ipv4Addr};
-use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use rustls::pki_types::{CertificateDer, PrivateKeyDer};
+use tokio_rustls::rustls::RootCertStore;
+
+use tokio_rustls::rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use rustls_pemfile::{certs, private_key};
+
 use tokio::io::{copy, sink, AsyncWriteExt,AsyncReadExt};
-use tokio::net::{TcpListener,TcpStream};
-use tokio_rustls::{rustls, TlsAcceptor,TlsConnector};
+use tokio::net::TcpListener;
+use tokio_rustls::{rustls, TlsAcceptor};
 
 use rand::Rng;
 
@@ -74,98 +76,66 @@ pub fn format_as_url(text:String) -> String {
     text.replace(":","%3A").replace("/","%2F")
 }
 
-pub async fn send_https(method:&str, select_url:&str, headers:Vec<(&str,&str)>, body:&str, cafile:Option<PathBuf>) -> String {
-    let url = match Url::parse_from_str(select_url) {
+
+pub fn send_https(method:&str,raw_url:&str,headers:Vec<(&str,&str)>,body:&str, expect_output:bool) -> String {
+    let url = match Url::parse_from_str(raw_url) {
         Ok(v) => v,
         Err(e) => {
             eprintln!("failed to parse URL , `{}`",e);
             return "".to_string();
         },
     };
-    //default Port for http = 80 ; default port for https = 443
+
     let addr = (url.domain.as_str(),443)
         .to_socket_addrs().unwrap()
         .next()
-        .ok_or_else(|| io::Error::from(io::ErrorKind::NotFound)).unwrap();
+        .ok_or_else(|| Error::from(ErrorKind::NotFound)).unwrap();
+
+    let root_store = RootCertStore {
+        roots: webpki_roots::TLS_SERVER_ROOTS.into(),
+    };
+    let mut config = rustls::ClientConfig::builder()
+        .with_root_certificates(root_store)
+        .with_no_client_auth();
+
+    // Allow using SSLKEYLOGFILE.
+    config.key_log = Arc::new(rustls::KeyLogFile::new());
 
 
-    let mut content = method.to_string() +" "+ &url.path+" HTTP/1.1\r\n"+"Host: "+&url.domain+"\r\n";
+    let server_name = url.domain.clone().try_into().unwrap();
+    let mut conn = rustls::ClientConnection::new(Arc::new(config), server_name).unwrap();
+    let mut sock = std::net::TcpStream::connect(addr).unwrap();
+    let mut tls = rustls::Stream::new(&mut conn, &mut sock);
+   
+    
+    let mut content = method.to_string() +" "+ &url.path+" HTTP/1.1\r\n"+
+                      "Host: "+&url.domain+"\r\n"+"Connection: close\r\n";
     for h in headers {
         content = content + h.0 + ": " + h.1 + "\r\n";
     }
     content = content + "\r\n" + body;
+    
+    //println!("Content = \n{}\n",content);
 
-    let mut root_cert_store = rustls::RootCertStore::empty();
-    if let Some(cafile) = cafile {
-        let mut pem = BufReader::new(File::open(cafile).unwrap());
-        for cert in rustls_pemfile::certs(&mut pem) {
-            root_cert_store.add(cert.unwrap()).unwrap();
-        }
+    tls.write_all(content.as_bytes()).unwrap();
+    
+    //writeln!(&mut std::io::stderr(),"Current ciphersuite: {:?}",ciphersuite.suite()).unwrap();
+    if expect_output == true {
+        let mut plaintext = Vec::new();
+        match tls.read_to_end(&mut plaintext) {
+            Ok(_) => {},
+            Err(e) => eprintln!("There was and Error reading the stream\n\nError: `{}`\n",e)
+        };
+
+        String::from_utf8_lossy(&mut plaintext).to_string()
     } else {
-        root_cert_store.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
+        "Did not expect output".to_string()
     }
-
-    let config = rustls::ClientConfig::builder()
-        .with_root_certificates(root_cert_store)
-        .with_no_client_auth();
-
-    let connector = TlsConnector::from(Arc::new(config));
-    
-
-    let stream = match TcpStream::connect(&addr).await {
-        Ok(v) => v,
-        Err(e) => {
-            eprintln!("failed to connect to {}\n 
-                check your internet connection",url.domain);
-            panic!("{}",e);
-        }
-    };
-    
-
-    
-    //println!("Attempting connection to domain: {}  on address: {}",url.domain, addr);
-    //println!("Sending content: {{\n{}\n}}\n\n",content);
-
-    let domain = rustls::pki_types::ServerName::try_from(url.domain)
-        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid DNS-name")).unwrap()
-        .to_owned();
-
-    let mut stream = match connector.connect(domain, stream).await {
-        Ok(s) => s,
-        Err(e) => {
-            eprintln!("failed to connect to {}, because `{}`",addr, e);
-            return "".to_string();
-        }
-    };
-  
-    stream.write_all(content.as_bytes()).await.unwrap(); 
-    
-    /*let mut buf = String::new();
-    stream.read_to_string(&mut buf).await.unwrap();
-    println!("Stream {}",buf);
-    buf*/
-
-    let mut fin_str = String::new();
-    loop {
-        let mut buffer = [0;432];
-        let byte_count = stream.read(&mut buffer).await.unwrap();
-        //println!("\n\nStream {:?}",String::from_utf8_lossy(&buffer[0..byte_count]));
-        
-        let stream_str = String::from_utf8_lossy(&buffer[0..byte_count]);
-
-        fin_str += &stream_str;
-        if stream_str.contains("0\r\n\r\n") {
-            break;
-        } 
-    }
-    //println!("fin_str = \n{}",fin_str);
-    fin_str
 }
 
-
 pub async fn listen_https(addr:SocketAddr, response:&str) -> String{
-    let certs = load_certs(Path::new("certs/root.crt")).unwrap();
-    let key = load_key(Path::new("certs/root.key")).unwrap();
+    let certs = load_certs("certs/root.crt").unwrap();
+    let key = load_key("certs/root.key").unwrap();
 
     let mut config = rustls::ServerConfig::builder()
         .with_no_client_auth()
@@ -223,11 +193,11 @@ pub async fn listen_https(addr:SocketAddr, response:&str) -> String{
     }
 }
 
-fn load_certs(path: &Path) -> io::Result<Vec<CertificateDer<'static>>> {
+fn load_certs(path: &str) -> io::Result<Vec<CertificateDer<'static>>> {
     certs(&mut BufReader::new(File::open(path)?)).collect()
 }
 
-fn load_key(path: &Path) -> io::Result<PrivateKeyDer<'static>> {
+fn load_key(path: &str) -> io::Result<PrivateKeyDer<'static>> {
     Ok(private_key(&mut BufReader::new(File::open(path)?))
         .unwrap()
         .ok_or(io::Error::new(
@@ -259,4 +229,8 @@ pub fn base64url_encode_no_padding(buffer:&[u8]) -> String {
         Ok(v) => v,
         Err(e) => panic!("Could not convert bytes to string : `{}`",e),
     }.replace("=","")
+}
+
+pub fn strip_string(instr:&str) -> String {
+    instr.replace("\n","")
 }
