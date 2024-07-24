@@ -1,6 +1,6 @@
 use std::net::{SocketAddr,Ipv4Addr};
 use std::fs;
-use crate::networking::{get_random_unused_port, generate_random_data_base64url, base64url_encode_no_padding, send_https, listen_https};
+use crate::networking::{get_random_unused_port, generate_random_data_base64url, send_https, listen_https};
 use crate::validate;
 
 pub struct ClientSecrets {
@@ -125,17 +125,17 @@ pub async fn do_oauth_async(client_secrets:&ClientSecrets) {
     //Generate state and PKCE values
     let state = generate_random_data_base64url(64);
     let code_verifier = generate_random_data_base64url(64);
-    let code_challenge = base64url_encode_no_padding(sha256::digest(&code_verifier).as_bytes());
-    const CODE_CHALLENGE_METHOD:&str = "S256";
+    //let code_challenge = base64url_encode_no_padding(sha256::digest(&code_verifier).as_bytes());
+    const CODE_CHALLENGE_METHOD:&str = "plain";// "S256";
   
     let url_base = "https://accounts.google.com/o/oauth2/v2/auth?";
     let autorization_request =
-    /*format!("{}response_type=code&scope=https://www.googleapis.com/auth/documents&{}&client_id={}&state={}&code_challenge={}&code_challenge_method={}"
-        ,url_base,redirect_uri,client_secrets.client_id,state,code_challenge
-        ,CODE_CHALLENGE_METHOD);*/
+    format!("{}response_type=code&scope=https://www.googleapis.com/auth/documents&{}&client_id={}&state={}&code_challenge={}&code_challenge_method={}"
+        ,url_base,redirect_uri,client_secrets.client_id,state,code_verifier
+        ,CODE_CHALLENGE_METHOD);
 
-   format!("{}response_type=code&scope=https://www.googleapis.com/auth/documents&{}&client_id={}"
-        ,url_base,redirect_uri,client_secrets.client_id);
+   /*format!("{}response_type=code&scope=https://www.googleapis.com/auth/documents&{}&client_id={}"
+        ,url_base,redirect_uri,client_secrets.client_id);*/
 
 
     //println!("autorization_request = {}",autorization_request);
@@ -175,8 +175,8 @@ pub async fn exchange_code_for_tokens_async(client_secrets:&ClientSecrets, code:
     //println!("\n!NOTE : {} : NOTE!\n",redirect_uri);
     
     let token_request_body =
-        format!("code={}&redirect_uri={}&client_id={}&client_secret={}&scope=&grant_type=authorization_code"
-                ,code,redirect_uri,client_secrets.client_id ,client_secrets.client_secret);
+        format!("code={}&redirect_uri={}&client_id={}&code_verifier={}&client_secret={}&scope=&grant_type=authorization_code"
+                ,code,redirect_uri,client_secrets.client_id,code_verifier,client_secrets.client_secret);
    
     let body = token_request_body;
     let body_len = body.len().to_string();
@@ -186,7 +186,7 @@ pub async fn exchange_code_for_tokens_async(client_secrets:&ClientSecrets, code:
     ];
 
     let httpresponse = send_https("POST",&client_secrets.token_uri,headers,&body,true);
-    //println!("Response From {} :{{\n{}\n}}",client_secrets.token_uri,httpresponse);
+    println!("Response From {} :{{\n{}\n}}",client_secrets.token_uri,httpresponse);
     let auth_request = parse_auth_data_from_response(&httpresponse);
     validate::check_if_auth_dir();
     save_auth_token_local(&auth_request);

@@ -49,7 +49,7 @@ impl Url {
     } 
 }
 
-pub fn example_client(method:&str,raw_url:&str,headers:Vec<(&str,&str)>,body:&str) -> String {
+pub fn test_client(method:&str,raw_url:&str,headers:Vec<(&str,&str)>,body:&str) -> String {
     let url = match Url::parse_from_str(raw_url) {
         Ok(v) => v,
         Err(e) => {
@@ -202,7 +202,7 @@ pub async fn send_https(method:&str, select_url:&str, headers:Vec<(&str,&str)>, 
 }
 */
 
-pub fn example_server(addr:SocketAddr,response:&str) -> String {
+pub fn test_server(addr:SocketAddr,response:&str) -> String {
     let cert_file = "certs/root.crt";
     let private_key_file = "certs/root.key";
 
