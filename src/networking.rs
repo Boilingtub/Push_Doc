@@ -8,7 +8,7 @@ use tokio_rustls::rustls::RootCertStore;
 use tokio_rustls::rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use rustls_pemfile::{certs, private_key};
 
-use tokio::io::{copy, sink, AsyncWriteExt,AsyncReadExt};
+use tokio::io::{AsyncWriteExt,AsyncReadExt};
 use tokio::net::TcpListener;
 use tokio_rustls::{rustls, TlsAcceptor};
 
@@ -155,7 +155,7 @@ pub async fn listen_https(addr:SocketAddr, response:&str) -> String{
 
         let fut = async move {
             let mut stream = acceptor.accept(stream).await.unwrap();
-            let mut output = sink();
+            //let mut output = sink();
             /*stream.write_all(
                 &b"HTTP/1.1 200 ok\r\n\
                 Connection: close\r\n\
@@ -178,7 +178,7 @@ pub async fn listen_https(addr:SocketAddr, response:&str) -> String{
             //println!("size = `{}`\ncontent = `{}`",size,String::from_utf8_lossy(&buf));
 
             stream.shutdown().await.unwrap();
-            copy(&mut stream, &mut output).await.unwrap();
+            //copy(&mut stream, &mut output).await.unwrap();
             //println!("successfully connected to: {}", peer_addr);
             String::from_utf8_lossy(&buf).to_string()
             //Ok(()) as io::Result<()>
@@ -232,5 +232,6 @@ pub fn base64url_encode_no_padding(buffer:&[u8]) -> String {
 }
 
 pub fn strip_string(instr:&str) -> String {
-    instr.replace("\n","")
+    //instr.replace("\n","")
+    instr.to_string()
 }

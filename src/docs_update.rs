@@ -1,13 +1,13 @@
 pub struct DocUpdate { //replaceText
     requests: Vec<UpdateRequest>,
-    write_control: WriteControl,
+    //write_control: WriteControl,
 }
 impl DocUpdate {
-    pub fn new(requests: Vec<UpdateRequest>, revision_id:&str) 
+    pub fn new(requests: Vec<UpdateRequest>) 
                -> DocUpdate {
         DocUpdate {
             requests,
-            write_control: WriteControl::new(revision_id),
+            //write_control: WriteControl::new(revision_id),
         }
     }
 
@@ -19,11 +19,11 @@ impl DocUpdate {
         "{\n".to_owned() +
             "  \"requests\": [\n" +
                 &self.requests_to_string() +
-            "  ],\n" +
-            "  \"writeControl\": {\n" + 
-                "    \"requiredRevisionId\": " + &self.write_control.required_revision_id + ",\n" +
-                "    \"targetRevisionId\": " + &self.write_control.target_revision_id + "\n" +
-            "  }\n" +
+            "  ]\n" +
+            //"  \"writeControl\": {\n" + 
+            //    "    \"requiredRevisionId\": \"" + &self.write_control.required_revision_id + "\",\n" +
+            //    "    \"targetRevisionId\": \"" + &self.write_control.target_revision_id + "\"\n" +
+            //"  }\n" +
         "}"
     }
 
@@ -32,24 +32,25 @@ impl DocUpdate {
         for r in self.requests.iter() {
             let s = match r {
                 UpdateRequest::ReplaceAllText(v) =>{
-                    "    \"replaceAllText\": {\n".to_owned() +
-                        "      \"replaceText\": \"" + &v.replace_text + "\",\n" +
-                        "      \"containsText\": {\n" +
-                            "        \"text\": \"" + &v.contains_text.text + "\",\n" +
-                            "        \"matchCase\": " + &v.contains_text.match_case.to_string() + "\n" +
-                        "      }\n" +
-                    "    },\n" 
+                    "    {\n".to_owned() +
+                    "      \"replaceAllText\": {\n" +
+                    "        \"replaceText\": \"" + &v.replace_text + "\",\n" +
+                    "        \"containsText\": {\n" +
+                    "          \"text\": \"" + &v.contains_text.text + "\",\n" +
+                    "          \"matchCase\": " + &v.contains_text.match_case.to_string() + "\n" +
+                    "        }\n" +
+                    "      }\n" + 
+                    "    },\n"
                 },
                 UpdateRequest::InsertText(v) => {
-                    "    \"insertText\": {\n".to_owned() +
-                        "      \"text\": \"" + &v.text + "\",\n" +
-                        "      \"location\": {\n" +
-                            "        \"segmentId\": \"" + &v.location.segment_id + "\",\n" +
-                            "        \"index\": " + &v.location.index.to_string() + "\n" +
-                        "      },\n" +
-                        "      \"endOfSegmentLocation\": {\n" +
-                            "        \"segmentId\": \"" + &v.end_of_segment_location.segment_id + "\"\n" +
-                        "      }\n" +
+                    "    {\n".to_owned() +
+                    "      \"insertText\": {\n" +
+                    "        \"text\": \"" + &v.text + "\",\n" +
+                    "        \"location\": {\n" +
+                    "          \"index\": " + &v.location.index.to_string() + ",\n" +
+                    "          \"segmentId\": \"" + &v.location.segment_id + "\"\n" +
+                    "        }\n" +
+                    "      }\n" +
                     "    },\n"
                 },
             };
@@ -78,8 +79,8 @@ impl UpdateRequest {
         )
     }
     
-    pub fn new_insert_text_request(text:&str, location:u32, 
-                               segment_id_start:&str, segment_id_end:&str)
+    pub fn new_insert_text_request(text:&str, location:u64, 
+                               segment_id_start:&str)
                                -> UpdateRequest {
         UpdateRequest::InsertText(
             InsertText {
@@ -88,9 +89,9 @@ impl UpdateRequest {
                     segment_id: segment_id_start.to_string(),
                     index: location,
                 },
-                end_of_segment_location: EndOfSegmentLocation {
+                /*end_of_segment_location: EndOfSegmentLocation {
                     segment_id: segment_id_end.to_string()
-                }
+                }*/
             }
         )
     }
@@ -111,18 +112,20 @@ pub struct ContainsText {
 pub struct InsertText {
     text: String,
     location: Location,
-    end_of_segment_location: EndOfSegmentLocation,
+    //end_of_segment_location: EndOfSegmentLocation,
 }
 pub struct Location {
     segment_id: String,
-    index: u32,
+    index: u64,
 }
+/*
 pub struct EndOfSegmentLocation {
     segment_id: String
-}
+}*/
 //-----
 
 //-----
+/*
 pub struct WriteControl {
     required_revision_id: String,
     target_revision_id: String,
@@ -135,4 +138,5 @@ impl WriteControl {
         }
     }
 }
+*/
 //-----

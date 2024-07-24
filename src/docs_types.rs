@@ -75,6 +75,7 @@ pub struct Document<'a> {
     pub revision_id:String,
     pub suggestions_view_mode: String,
     pub id: &'a str,
+    pub last_index:u64,
     pub json: JsonItem,
 }
 
@@ -86,14 +87,18 @@ impl <'a>Document<'_> {
                       panic!("could not parse document json in Document::new(raw_json:&str)");
             },
         };
+        let body = Document::get_body_from_json(&json);
+        let last_index = Document::get_body_last_index(&body,body.len()); 
+    
         Document {
             title: Document::get_title_from_raw_json(&raw_json),
-            body: Document::get_body_from_json(&json),
+            body,
             document_style: GetJson::string(&json,"documentStyle"),
             named_styles: GetJson::string(&json,"namedStyles"),
             revision_id: GetJson::string(&json,"revisionId"),
             suggestions_view_mode: GetJson::string(&json,"suggestionsViewMode"),
             id,
+            last_index,
             json,
         }
     }
@@ -117,6 +122,23 @@ impl <'a>Document<'_> {
                 "Unspecified Title"
             },
         }.to_string()
+    }
+
+    fn get_body_last_index(body:&Vec<BodyPart>, length:usize) -> u64{
+        match body.get(length) {
+            Some(v) => match v {
+                BodyPart::Paragraph(p) => p.end_index,
+                BodyPart::SectionBreak(s) => s.end_index,
+                BodyPart::Unknown(u) => {
+                    eprintln!("last BodyPart is of Type BodyPart::Unknown \n{}\n",u);
+
+                    Document::get_body_last_index(&body, length -1 )
+                }
+            }
+            None => {
+                Document::get_body_last_index(&body, length -1)
+            }        
+        }
     }
 
     fn get_body_from_json(json:&JsonItem) -> Vec<BodyPart> {
@@ -209,19 +231,19 @@ impl BodyPart {
 }
 
 pub struct SectionBreak {
-    start_index:u32,
-    end_index:u32,
+    start_index:u64,
+    end_index:u64,
     //section_break in a "sectionBreak": {...}
     section_break:String,
 }
 impl SectionBreak {
     pub fn from_json(json:&JsonItem) -> SectionBreak {
-        let end_index =  i128_to_u32(GetJson::i128(json,"endIndex"));
+        let end_index =  i128_to_u64(GetJson::i128(json,"endIndex"));
         
         let start_index = if !json["startIndex"].exists() {
             end_index-1
         } else {
-            i128_to_u32(GetJson::i128(json,"startIndex"))
+            i128_to_u64(GetJson::i128(json,"startIndex"))
         };
 
         SectionBreak {
@@ -242,8 +264,8 @@ impl SectionBreak {
 }
 
 pub struct Paragraph {
-    start_index:u32,
-    end_index:u32,
+    start_index:u64,
+    end_index:u64,
     //elements and paragraph_style is in a "paragraph": {...}
     elements:Vec<ParagraphElement>,
     paragraph_style:ParagraphStyle,
@@ -266,8 +288,8 @@ impl Paragraph {
         };
 
         Paragraph {
-            start_index: i128_to_u32(GetJson::i128(json,"startIndex")),
-            end_index:  i128_to_u32(GetJson::i128(json,"endIndex")),
+            start_index: i128_to_u64(GetJson::i128(json,"startIndex")),
+            end_index:  i128_to_u64(GetJson::i128(json,"endIndex")),
             elements: elements_vec,
             paragraph_style: ParagraphStyle::from_json(&json["paragraph"]["paragraphStyle"]),
         }
@@ -310,15 +332,15 @@ impl Paragraph {
 }
 
 pub struct ParagraphElement {
-    start_index:u32,
-    end_index:u32,
+    start_index:u64,
+    end_index:u64,
     text_run:TextRun,
 }
 impl ParagraphElement {
      pub fn from_json(json:&JsonItem) -> ParagraphElement {
         ParagraphElement {
-            start_index: i128_to_u32(GetJson::i128(json,"startIndex")),
-            end_index:  i128_to_u32(GetJson::i128(json,"endIndex")),
+            start_index: i128_to_u64(GetJson::i128(json,"startIndex")),
+            end_index:  i128_to_u64(GetJson::i128(json,"endIndex")),
             text_run: TextRun::from_json(&json["textRun"]), 
         }
     }
@@ -370,12 +392,12 @@ impl ParagraphStyle {
     }
 }
 
-fn i128_to_u32(v:i128) -> u32 {
+fn i128_to_u64(v:i128) -> u64 {
     if v > std::u32::MAX as i128 {
         eprintln!("`ERROR !`number bigger that u32 , cannot fit !!!!
                     truncating to u32::MAX !!!!!");
-        u32::MAX
+        u64::MAX
     } else {
-        v as u32
+        v as u64
     }
 }

@@ -41,18 +41,17 @@ impl ClientSecrets {
     }
 }
 
-pub async fn create_access_token() {
-    let client_secrets = get_client_secrets();
+pub async fn create_access_token(client_secrets:&ClientSecrets) {
     do_oauth_async(client_secrets).await;
 }
 
-pub async fn recurse_async_get_access_token(renew:bool) -> String {
+pub async fn recurse_async_get_access_token(renew:bool,client_secrets:&ClientSecrets) -> String {
     Box::pin(async move {        
-        get_access_token(renew).await
+        get_access_token(renew,client_secrets).await
     }).await
 }
 
-pub async fn get_access_token(renew: bool) -> String {
+pub async fn get_access_token(renew: bool , client_secrets:&ClientSecrets) -> String {
     if validate::if_token_exists() == true{
         let token_raw_json = match fs::read_to_string("auth/token") {
             Ok(v) => v,
@@ -63,16 +62,16 @@ pub async fn get_access_token(renew: bool) -> String {
         let token_json = match jsonic::parse(&token_raw_json) {
             Ok(v) => v,
             Err(..) => { eprintln!("Token file not valid json, recreating...");
-                        create_access_token().await;
-                        return recurse_async_get_access_token(renew).await;
+                        create_access_token(client_secrets).await;
+                        return recurse_async_get_access_token(renew,client_secrets).await;
             },
         };
         
         let token_type = match token_json["token_type"].as_str() {
             Some(v) => v,
             None => { eprintln!("Could not find `token_type`, recreating token...");
-                        create_access_token().await;
-                        return recurse_async_get_access_token(renew).await;
+                        create_access_token(client_secrets).await;
+                        return recurse_async_get_access_token(renew,client_secrets).await;
             }
         };
 
@@ -80,8 +79,8 @@ pub async fn get_access_token(renew: bool) -> String {
         let token_value = match token_json[to_get].as_str() {
             Some(v) => v,
             None => { eprintln!("Could not find `access_token`, recreating token...");
-                      create_access_token().await;
-                      return recurse_async_get_access_token(renew).await;
+                      create_access_token(client_secrets).await;
+                      return recurse_async_get_access_token(renew,client_secrets).await;
             },
         };
 
@@ -92,10 +91,11 @@ pub async fn get_access_token(renew: bool) -> String {
         }
     }
     else {
-        create_access_token().await;
-        recurse_async_get_access_token(renew).await
+        create_access_token(client_secrets).await;
+        recurse_async_get_access_token(renew,client_secrets).await
     }
 }
+
 
 pub fn get_client_secrets() -> ClientSecrets {
     validate::check_if_auth_dir();
@@ -118,7 +118,7 @@ pub fn get_client_secrets() -> ClientSecrets {
 }
 
 #[allow(unused)]
-pub async fn do_oauth_async(client_secrets:ClientSecrets) {
+pub async fn do_oauth_async(client_secrets:&ClientSecrets) {
     let listen_port = get_random_unused_port();
     let redirect_uri = format!("redirect_uri=https://localhost:{}/",listen_port);
     let addr = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), listen_port);
@@ -141,11 +141,12 @@ pub async fn do_oauth_async(client_secrets:ClientSecrets) {
     //println!("autorization_request = {}",autorization_request);
 
     
-    let _ = std::process::Command::new("xdg-open")
+    tokio::spawn(async move {    
+        let _ = std::process::Command::new("xdg-open")
                         .arg(autorization_request)
                         .output()
                         .expect("Failed to execute xdg-open");
-    
+    });
     
     let response = "HTTP/1.1 200 ok\r\nConnection: close\r\nContent-length: 20\r\n\r\nSignin Successfull !";
     let code = parse_auth_code_from_response( &listen_https(addr,response).await );  
@@ -187,14 +188,15 @@ pub async fn exchange_code_for_tokens_async(client_secrets:&ClientSecrets, code:
     let httpresponse = send_https("POST",&client_secrets.token_uri,headers,&body,true);
     //println!("Response From {} :{{\n{}\n}}",client_secrets.token_uri,httpresponse);
     let auth_request = parse_auth_data_from_response(&httpresponse);
+    validate::check_if_auth_dir();
     save_auth_token_local(&auth_request);
 
 }
 
-pub async fn renew_access_token() {
+pub async fn renew_access_token(client_secrets:&ClientSecrets) {
     validate::check_if_auth_dir();
-    let client_secrets = get_client_secrets();
-    let refresh_token = &get_access_token(true).await;
+    //let client_secrets = get_client_secrets();
+    let refresh_token = &get_access_token(true,client_secrets).await;
 
     let token_request_body =
         format!("client_id={}&client_secret={}&refresh_token={}&grant_type=refresh_token",
@@ -207,7 +209,7 @@ pub async fn renew_access_token() {
     ];
     let httpresponse = send_https("POST",&client_secrets.token_uri,headers,&body,true);
     let renew_request = parse_auth_data_from_response(&httpresponse);
-    update_auth_token_local(&renew_request).await;
+    update_auth_token_local(&renew_request,client_secrets).await;
 }
 
 fn parse_auth_code_from_response(httpresponse: &str) -> String {
@@ -251,7 +253,7 @@ fn save_auth_token_local(auth_str: &str) {
     write!(out_file, "{}", auth_str).unwrap();
 }
 
-async fn update_auth_token_local(renew_token: &str) {
+async fn update_auth_token_local(renew_token: &str, client_secrets:&ClientSecrets) {
     let renew_json = match jsonic::parse(renew_token) {
         Ok(v) => v,
         Err(e) => { println!("failed to parse, renew Token, not valid json\n
@@ -261,7 +263,7 @@ async fn update_auth_token_local(renew_token: &str) {
     };
    
     if !validate::if_token_exists() {
-        create_access_token().await;
+        create_access_token(client_secrets).await;
         return;
     } 
 

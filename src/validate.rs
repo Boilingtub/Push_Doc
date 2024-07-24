@@ -3,8 +3,7 @@ use std::{fs, path::Path};
 pub fn check_if_auth_dir() {
     if !Path::new("auth").exists() {
         println!("The `auth` directory does not exists\nThe directory will now
-            be created\n
-            Please place your client_secrets file in that directory");
+            be created\n");
         match fs::create_dir("auth") {
         Ok(v) => v,
         Err(e) => { println!("Error creating `auth` directory\nErr:{}",e);
