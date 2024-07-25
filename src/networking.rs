@@ -64,9 +64,9 @@ pub fn get_random_unused_port() -> u16 {
     }
     let avail_port = (8000..9000).find(|port| port_is_available(*port));
     match avail_port {
-        Some(v) => Some(v).unwrap(),
+        Some(v) => v,
         None => {
-            eprintln!("No port could be found");
+            eprintln!("No port could be found, Defaulting to port: 5444");
             return 5444;
         }
     }
@@ -76,6 +76,13 @@ pub fn format_as_url(text:String) -> String {
     text.replace(":","%3A").replace("/","%2F")
 }
 
+fn ip_address_resolution_error_escape(domain:&str,e:Error) {
+    eprintln!("Could not find corrosponding Ip Addres for\n 
+                {}:443\nERROR={}\n 
+                Please check if domian is correctly supplied\n 
+                STOPPING PROGRAM...\n"
+                ,domain,e);
+}
 
 pub fn send_https(method:&str,raw_url:&str,headers:Vec<(&str,&str)>,body:&str, expect_output:bool) -> String {
     let url = match Url::parse_from_str(raw_url) {
@@ -87,9 +94,15 @@ pub fn send_https(method:&str,raw_url:&str,headers:Vec<(&str,&str)>,body:&str, e
     };
 
     let addr = (url.domain.as_str(),443)
-        .to_socket_addrs().unwrap()
+        .to_socket_addrs().unwrap_or_else(|e|{
+            ip_address_resolution_error_escape(url.domain.as_str(),e);
+            std::process::exit(1);
+        })
         .next()
-        .ok_or_else(|| Error::from(ErrorKind::NotFound)).unwrap();
+        .ok_or_else(|| Error::from(ErrorKind::NotFound)).unwrap_or_else(|e| {
+            ip_address_resolution_error_escape(url.domain.as_str(),e);
+            std::process::exit(1);
+        });
 
     let root_store = RootCertStore {
         roots: webpki_roots::TLS_SERVER_ROOTS.into(),

@@ -250,7 +250,13 @@ fn save_auth_token_local(auth_str: &str) {
         }
     };
     use std::io::Write;
-    write!(out_file, "{}", auth_str).unwrap();
+    match write!(out_file, "{}", auth_str) {
+        Ok(_) => {},
+        Err(e) => {
+            eprintln!("error writing to {}\nERROR={}\n",auth_str,e);
+            std::process::exit(1);
+        }
+    };
 }
 
 async fn update_auth_token_local(renew_token: &str, client_secrets:&ClientSecrets) {
