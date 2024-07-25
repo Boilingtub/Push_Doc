@@ -117,7 +117,6 @@ pub fn get_client_secrets() -> ClientSecrets {
     }
 }
 
-#[allow(unused)]
 pub async fn do_oauth_async(client_secrets:&ClientSecrets) {
     let listen_port = get_random_unused_port();
     let redirect_uri = format!("redirect_uri=https://localhost:{}/",listen_port);
@@ -139,13 +138,21 @@ pub async fn do_oauth_async(client_secrets:&ClientSecrets) {
 
 
     //println!("autorization_request = {}",autorization_request);
+    let cmd_to_run = if cfg!(target_os = "linux") {
+        "xdg-open"
+    } else if cfg!(target_os = "windows") {
+        "explorer"
+    } else if cfg!(target_os = "macos") {
+        "open"
+    } else {
+        "xdg_open"
+    };
 
-    
     tokio::spawn(async move {    
-        let _ = std::process::Command::new("xdg-open")
+        let _ = std::process::Command::new(cmd_to_run)
                         .arg(autorization_request)
                         .output()
-                        .expect("Failed to execute xdg-open");
+                        .expect("Failed to open Web-browser");
     });
     
     let response = "HTTP/1.1 200 ok\r\nConnection: close\r\nContent-length: 20\r\n\r\nSignin Successfull !";
@@ -163,6 +170,7 @@ pub async fn do_oauth_async(client_secrets:&ClientSecrets) {
     write!(out_file, "{}", code).unwrap();
     let code = std::fs::read_to_string("auth/code").unwrap();*/
 
+    
     exchange_code_for_tokens_async(&client_secrets,&code,&code_verifier).await;
 }
 
@@ -186,7 +194,7 @@ pub async fn exchange_code_for_tokens_async(client_secrets:&ClientSecrets, code:
     ];
 
     let httpresponse = send_https("POST",&client_secrets.token_uri,headers,&body,true);
-    println!("Response From {} :{{\n{}\n}}",client_secrets.token_uri,httpresponse);
+    //println!("Response From {} :{{\n{}\n}}",client_secrets.token_uri,httpresponse);
     let auth_request = parse_auth_data_from_response(&httpresponse);
     validate::check_if_auth_dir();
     save_auth_token_local(&auth_request);

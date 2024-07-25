@@ -47,10 +47,11 @@ impl Script {
         loop {
             let job = match input[job_index..].find("{\n") {
                 Some(a) => { 
-                    match input.find("}\n") {
+                    match input[job_index..].find("}\n") {
                         Some(b) => { 
-                            job_index = b;
-                            &input[a+2..][..b]
+                            let fin_str = &input[job_index..][a..][..b];
+                            job_index += b+1;
+                            fin_str
                         },
                         None => { 
                             eprintln!("Open bracket found on line: {}\n 
@@ -64,6 +65,7 @@ impl Script {
                     break ;
                 }
             };
+            println!("\nJOB TO DO : {}\n", job);
             if job.len() > 1 {
                 jobs_vec.push(Job::from_str(job).await)
             }
@@ -208,7 +210,7 @@ pub fn new_insert_text(content:&str,doc_last_index:u64) -> UpdateRequest {
         }
     };
     let fin_insert_text = Script::try_as_file_reference(to_insert);
-    println!("index as num = {}",index_as_num);
+    //println!("index as num = {}",index_as_num);
     UpdateRequest::new_insert_text_request(&fin_insert_text,index_as_num,"")
 }
 
