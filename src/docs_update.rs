@@ -53,6 +53,17 @@ impl DocUpdate {
                     "      }\n" +
                     "    },\n"
                 },
+                UpdateRequest::DeleteContentRange(v) => {
+                    "    {\n".to_owned() +
+                    "     \"deleteContentRange\": {\n" +
+                    "       \"range\": {\n" +
+                    "          \"segmentId\": \"" + &v.segment_id + "\",\n" +
+                    "          \"startIndex\": " + &v.start_index.to_string() + ",\n" +
+                    "          \"endIndex\": " + &v.end_index.to_string() + "\n" +
+                    "        }\n" +
+                    "      }\n" +
+                    "    },\n"
+                }
             };
             finstr += &s
         }
@@ -63,7 +74,8 @@ impl DocUpdate {
 
 pub enum UpdateRequest {
     ReplaceAllText(ReplaceAllText),
-    InsertText(InsertText)
+    InsertText(InsertText),
+    DeleteContentRange(DeleteContentRange)
 }
 impl UpdateRequest {
     pub fn new_replace_all_text_request(to_replace:&str, replace_text:&str,
@@ -92,6 +104,16 @@ impl UpdateRequest {
                 /*end_of_segment_location: EndOfSegmentLocation {
                     segment_id: segment_id_end.to_string()
                 }*/
+            }
+        )
+    }
+
+    pub fn new_delete_content_range(start:u64,end:u64,segment_id:&str) -> UpdateRequest {
+        UpdateRequest::DeleteContentRange(
+            DeleteContentRange {
+                start_index: start,
+                end_index: end,
+                segment_id: segment_id.to_string()
             }
         )
     }
@@ -140,3 +162,8 @@ impl WriteControl {
 }
 */
 //-----
+pub struct DeleteContentRange {
+    segment_id: String,
+    start_index: u64,
+    end_index: u64
+}

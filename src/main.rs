@@ -10,10 +10,7 @@ pub mod script;
 async fn main() {
     let args: Vec<String> = std::env::args().collect();
     if args.len() > 1 {
-        let jobs = script::Script::parse_file(&args[1]).await.jobs;
-        for job in jobs {
-            googledocs::update_document(&job.id, &job.client_secret , &job.updates.to_string()).await; 
-        }  
+        script::Script::interpret_file(&args[1]).await
     } else {
         println!("No Script file specified");
     }

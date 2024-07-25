@@ -63,3 +63,9 @@ all occurances of the text in param1 will be replaced by the text in param2
 ```
 replaceAllText=(<Text to be replaced>,<text to replace with>)
 ```
+## Behaviour
+- Program evaluates in a specific order
+    - 1. deleteContentRange
+    - 2. insertText
+    - 3. replaceAllText
+## Known Bugs

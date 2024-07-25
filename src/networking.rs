@@ -137,7 +137,9 @@ pub fn send_https(method:&str,raw_url:&str,headers:Vec<(&str,&str)>,body:&str, e
         let mut plaintext = Vec::new();
         match tls.read_to_end(&mut plaintext) {
             Ok(_) => {},
-            Err(e) => eprintln!("There was and Error reading the stream\n\nError: `{}`\n",e)
+            Err(e) => if e.kind() != std::io::ErrorKind::UnexpectedEof {
+                eprintln!("There was and Error reading the stream\n\nError: `{}`\n",e);
+            }
         };
 
         String::from_utf8_lossy(&mut plaintext).to_string()
