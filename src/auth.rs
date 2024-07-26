@@ -145,7 +145,7 @@ pub async fn do_oauth_async(client_secrets:&ClientSecrets) {
     } else if cfg!(target_os = "macos") {
         "open"
     } else {
-        "xdg_open"
+        "xdg-open"
     };
 
     tokio::spawn(async move {    

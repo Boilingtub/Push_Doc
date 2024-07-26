@@ -6,6 +6,7 @@ for routine automatable changes
 - rust Compiler
 ## Runtime Dependencies
 - client_secrets file 
+- certs
 ## Installation
 - build from source using `cargo b --release` 
 - Precompiled Binaries available under tab on github `*releases*`
@@ -27,7 +28,7 @@ insertText=(oogabooga,END)
 replaceAllText=(hello,idkhw)
 }
 ```
-#### id
+### id
 id of google document you wish to edit,
 found in url when you open the document in web app for google docs
 Example url: `https://docs.google.com/document/d/1kVGyd1WW_qqcjFqf56YkET2Y_77Bct-FCZP0qCXl0yo/edit`
@@ -35,7 +36,7 @@ Example url: `https://docs.google.com/document/d/1kVGyd1WW_qqcjFqf56YkET2Y_77Bct
 id=<The id of the google document you wish to edit>
 ```
 
-#### client_secrets
+### client_secrets
 client_secrets , this a per user client_secrets file that is used to autherticate a user \
 
 **NOTICE :** the file/path is surrounded by `$[ ]$` this tells push_doc to look for a file \
@@ -76,3 +77,5 @@ deleteContentRange=(<start index>,<end index>)
 ## Behaviour
 script gets organised and each Update is run sequentially
 ## Known Bugs
+## Roadmap for the future
+- remove all unwraps and '?'-operators from the program
