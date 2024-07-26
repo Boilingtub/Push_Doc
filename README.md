@@ -1,6 +1,6 @@
 # Push_Doc
 Scriptable Application to Automate google document updates \
-for routine automatable changes \
+for routine automatable changes 
 
 ## Build Dependencies
 - rust Compiler
@@ -64,8 +64,5 @@ all occurances of the text in param1 will be replaced by the text in param2
 replaceAllText=(<Text to be replaced>,<text to replace with>)
 ```
 ## Behaviour
-- Program evaluates in a specific order
-    - 1. deleteContentRange
-    - 2. insertText
-    - 3. replaceAllText
+script gets organised and each Update is run sequentially
 ## Known Bugs
