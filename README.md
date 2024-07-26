@@ -5,9 +5,8 @@ for routine automatable changes
 ## Build Dependencies
 - rust Compiler
 - client_secrets file
-- xdg-open
-- **currently only supports Linux**
-
+## Runtime Dependencies
+- Nothing
 ## Configuration
 Create new file (extention does not matter) in a known location \
 pass in file as commandline argument when running program \
@@ -63,6 +62,15 @@ all occurances of the text in param1 will be replaced by the text in param2
 ```
 replaceAllText=(<Text to be replaced>,<text to replace with>)
 ```
+
+### deleteContentRange
+`deleteContentRange=(parm1,parm2)` \
+parm1 cannot be larger than param2 ! \
+params can be any `number > 0` , or `END` or `START`
+```
+deleteContentRange=(<start index>,<end index>)
+```
+
 ## Behaviour
 script gets organised and each Update is run sequentially
 ## Known Bugs
