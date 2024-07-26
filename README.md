@@ -4,9 +4,11 @@ for routine automatable changes
 
 ## Build Dependencies
 - rust Compiler
-- client_secrets file
 ## Runtime Dependencies
-- Nothing
+- client_secrets file 
+## Installation
+- build from source using `cargo b --release` 
+- Precompiled Binaries available under *packages*
 ## Configuration
 Create new file (extention does not matter) in a known location \
 pass in file as commandline argument when running program \
