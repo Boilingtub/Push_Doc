@@ -6,7 +6,6 @@ for routine automatable changes
 - rust Compiler
 ## Runtime Dependencies
 - client_secrets file 
-- certs
 ## Installation
 - build from source using `cargo b --release` 
 - Precompiled Binaries available under tab on github `*releases*`
@@ -73,7 +72,9 @@ params can be any `number > 0` , or `END` or `START`
 ```
 deleteContentRange=(<start index>,<end index>)
 ```
-
+## Security 
+The program only ever uses the localhost:8000 thus the included
+self-signed ca-certificate is enough to simply authorize localhost.
 ## Behaviour
 script gets organised and each Update is run sequentially
 ## Known Bugs

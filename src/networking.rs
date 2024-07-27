@@ -1,4 +1,3 @@
-use std::fs::File;
 use std::io::{self, BufReader, ErrorKind, Read,Write,Error};
 use std::net::{SocketAddr,ToSocketAddrs,Ipv4Addr};
 use std::sync::Arc;
@@ -149,8 +148,13 @@ pub fn send_https(method:&str,raw_url:&str,headers:Vec<(&str,&str)>,body:&str, e
 }
 
 pub async fn listen_https(addr:SocketAddr, response:&str) -> String{
-    let certs = load_certs("certs/root.crt").unwrap();
-    let key = load_key("certs/root.key").unwrap();
+    const CERT_CONTENT: &str = include_str!("../certs/root.crt");
+    const KEY_CONTENT: &str = include_str!("../certs/root.key");
+   
+    let certs = load_certs_from_str(CERT_CONTENT).expect("Included certificate is not valid, Or could not be found !");
+    let key = load_key_from_str(KEY_CONTENT).expect("Included Private_Key is not valid, Or could not be found !");
+    //let certs = load_certs("certs/root.crt").unwrap();
+    //let key = load_key("certs/root.key").unwrap();
 
     let mut config = rustls::ServerConfig::builder()
         .with_no_client_auth()
@@ -208,17 +212,17 @@ pub async fn listen_https(addr:SocketAddr, response:&str) -> String{
     }
 }
 
-fn load_certs(path: &str) -> io::Result<Vec<CertificateDer<'static>>> {
-    certs(&mut BufReader::new(File::open(path)?)).collect()
+fn load_certs_from_str(content: &str) -> io::Result<Vec<CertificateDer<'static>>> {
+    certs( &mut BufReader::new( content.as_bytes() ) ).collect()
 }
 
-fn load_key(path: &str) -> io::Result<PrivateKeyDer<'static>> {
-    Ok(private_key(&mut BufReader::new(File::open(path)?))
+fn load_key_from_str(content: &str) -> io::Result<PrivateKeyDer<'static>> {
+    Ok(private_key(&mut BufReader::new(content.as_bytes()))
         .unwrap()
         .ok_or(io::Error::new(
             ErrorKind::Other,
             "no private key found".to_string(),
-        ))?)
+        )).unwrap())
 }
 
 pub fn generate_random_data_base64url(length:u8) -> String {
