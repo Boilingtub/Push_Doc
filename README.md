@@ -1,9 +1,6 @@
-# Push_Doc
+# Push_Doc ![alt text](https://github.com/Boilingtub/Push_Doc/blob/main/PushDocLogo.png?raw=true)
 Scriptable Application to Automate google document updates \
 for routine automatable changes 
-
-![alt text](https://github.com/Boilingtub/Push_Doc/blob/main/PushDocLogo.png?raw=true)
-
 
 ## Build Dependencies
 - rust Compiler
