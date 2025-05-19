@@ -2,6 +2,8 @@
 Scriptable Application to Automate google document updates \
 for routine automatable changes 
 
+![alt text](https://github.com/[username]/[reponame]/blob/[branch]/image.jpg?raw=true)
+
 ## Build Dependencies
 - rust Compiler
 ## Runtime Dependencies
