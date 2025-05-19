@@ -2,7 +2,8 @@
 Scriptable Application to Automate google document updates \
 for routine automatable changes 
 
-![alt text](https://github.com/[username]/[reponame]/blob/[branch]/image.jpg?raw=true)
+![alt text](https://github.com/Boilingtub/Push_Doc/blob/main/PushDocLogo.png?raw=true)
+
 
 ## Build Dependencies
 - rust Compiler
